@@ -1,0 +1,36 @@
+{
+  "name": "nestjs-supabase",
+  "version": "1.0.0",
+  "description": "Supabase integration for NestJS - DI, request-scoped client with RLS, auth guard, and error helpers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "nestjs",
+    "supabase",
+    "rls",
+    "auth"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "@nestjs/common": "^10 || ^11",
+    "@nestjs/core": "^10 || ^11"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
