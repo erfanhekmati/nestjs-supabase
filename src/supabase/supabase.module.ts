@@ -7,9 +7,6 @@ import { extractBearerToken } from './utils/token-extractor';
 
 @Module({})
 export class SupabaseModule {
-  /**
-   * Register the Supabase module with static configuration.
-   */
   static forRoot(options: SupabaseModuleOptions): DynamicModule {
     const optionsProvider = {
       provide: SUPABASE_OPTIONS,
@@ -53,9 +50,6 @@ export class SupabaseModule {
     };
   }
 
-  /**
-   * Register the Supabase module with async configuration (e.g. ConfigService).
-   */
   static forRootAsync(options: SupabaseModuleAsyncOptions): DynamicModule {
     const asyncOptionsProvider = {
       provide: SUPABASE_OPTIONS,
