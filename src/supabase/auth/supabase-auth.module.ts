@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 
-/**
- * Optional auth submodule. Provides SupabaseAuthGuard for JWT validation.
- * Requires SupabaseModule.forRoot() or forRootAsync() to be imported first.
- */
 @Module({
-  providers: [SupabaseAuthGuard],
+  providers: [
+    SupabaseAuthGuard,
+    {
+      provide: APP_GUARD,
+      useClass: SupabaseAuthGuard,
+    },
+  ],
   exports: [SupabaseAuthGuard],
 })
 export class SupabaseAuthModule {}

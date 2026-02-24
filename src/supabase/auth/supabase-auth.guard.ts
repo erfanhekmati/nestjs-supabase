@@ -10,6 +10,7 @@ import { InjectSupabase } from '../decorators/inject-supabase.decorator';
 import { extractBearerToken } from '../utils/token-extractor';
 
 export const SUPABASE_AUTH_OPTIONAL = 'supabase_auth_optional';
+export const SUPABASE_AUTH_PUBLIC = 'supabase_auth_public';
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
@@ -19,6 +20,18 @@ export class SupabaseAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic =
+      this.reflector.getAllAndOverride<boolean>(SUPABASE_AUTH_PUBLIC, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? false;
+
+    if (isPublic) {
+      const request = context.switchToHttp().getRequest();
+      request.user = null;
+      return true;
+    }
+
     const optional =
       this.reflector.getAllAndOverride<boolean>(SUPABASE_AUTH_OPTIONAL, [
         context.getHandler(),

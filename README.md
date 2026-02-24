@@ -100,22 +100,28 @@ export class UsersService {
 }
 ```
 
-### Auth guard + user decorator
+### Auth guard (global by default)
+
+`SupabaseAuthModule` registers the guard globally — all routes require authentication by default. Use `@Public()` to make routes accessible without auth:
 
 ```typescript
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import {
-  SupabaseAuthGuard,
-  SupabaseAuthModule,
-  SupabaseUser,
-} from 'nestjs-supabase';
+import { Controller, Get } from '@nestjs/common';
+import { Public, SupabaseAuthModule, SupabaseUser } from 'nestjs-supabase';
 
 @Controller('profile')
-@UseGuards(SupabaseAuthGuard)
 export class ProfileController {
   @Get()
   getProfile(@SupabaseUser() user: Record<string, unknown> | null) {
     return user;
+  }
+}
+
+@Controller('health')
+export class HealthController {
+  @Public()
+  @Get()
+  health() {
+    return { status: 'ok' };
   }
 }
 ```
@@ -133,20 +139,23 @@ export class AppModule {}
 
 ### Optional auth (public routes with user when present)
 
+Use `@SupabaseAuthOptional()` when you want to allow unauthenticated requests but still attach the user when a valid token is provided:
+
 ```typescript
-import { UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import {
-  SupabaseAuthGuard,
   SupabaseAuthOptional,
   SupabaseUser,
 } from 'nestjs-supabase';
 
-@UseGuards(SupabaseAuthGuard)
-@SupabaseAuthOptional()
-@Get('/feed')
-getFeed(@SupabaseUser() user: Record<string, unknown> | null) {
-  // user is null if not authenticated
-  return this.feedService.getFeed(user?.id);
+@Controller('feed')
+export class FeedController {
+  @SupabaseAuthOptional()
+  @Get()
+  getFeed(@SupabaseUser() user: Record<string, unknown> | null) {
+    // user is null if not authenticated
+    return this.feedService.getFeed(user?.id);
+  }
 }
 ```
 
@@ -167,11 +176,12 @@ Mapped status codes: 400 → BadRequest, 401 → Unauthorized, 403 → Forbidden
 | Export | Description |
 |--------|-------------|
 | `SupabaseModule` | Core module; use `forRoot()` or `forRootAsync()` |
-| `SupabaseAuthModule` | Optional; provides `SupabaseAuthGuard` |
+| `SupabaseAuthModule` | Optional; registers `SupabaseAuthGuard` globally |
 | `InjectSupabase()` | Inject singleton client |
 | `InjectSupabaseRequest()` | Inject request-scoped client (RLS) |
 | `SupabaseUser()` | Param decorator for `req.user` |
-| `SupabaseAuthOptional()` | Allow unauthenticated requests |
+| `Public()` | Skip auth entirely (for public routes) |
+| `SupabaseAuthOptional()` | Allow unauthenticated requests; attach user when present |
 | `SupabaseAuthGuard` | JWT validation guard |
 | `throwIfSupabaseError(result)` | Convert Supabase errors to HttpException |
 
