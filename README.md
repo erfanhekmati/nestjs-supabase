@@ -1,18 +1,18 @@
 # nestjs-supabase
 
-Supabase integration for NestJS — DI, request-scoped client with RLS support, auth guard, and error helpers.
+Drop Supabase into your NestJS app without the fuss. You get dependency injection, a request-scoped client that plays nice with RLS, an auth guard, and helpers to turn Supabase errors into proper Nest exceptions.
 
-## Features
+## What you get
 
-- **SupabaseModule** — Easy setup with `forRoot` / `forRootAsync`
-- **Request-scoped client** — Automatically forwards `Authorization` header so RLS works
-- **Auth guard** — Global JWT validation; use `@Public()` to skip auth on specific routes
-- **Error helper** — Maps Supabase errors to NestJS `HttpException`s
-- **Decorators** — `@InjectSupabase()`, `@InjectSupabaseRequest()`, `@SupabaseUser()`, `@Public()`, `@SupabaseAuthOptional()`
+- **SupabaseModule** — Wire it up with `forRoot` or `forRootAsync`, depending on how you like to config things
+- **Request-scoped client** — Sends the `Authorization` header along so Row Level Security actually works
+- **Auth guard** — JWT validation out of the box; mark routes as `@Public()` when you want to skip it
+- **Error helper** — No more manual `if (res.error)` checks; it maps Supabase errors to NestJS `HttpException`s
+- **Decorators** — `@InjectSupabase()`, `@InjectSupabaseRequest()`, `@SupabaseUser()`, `@Public()`, `@SupabaseAuthOptional()` for cleaner code
 
-## Installation
+## Install
 
-Requires NestJS 10 or 11, Node 18+.
+You’ll need NestJS 10 or 11 and Node 18+.
 
 ```bash
 npm install nestjs-supabase @supabase/supabase-js
@@ -21,6 +21,8 @@ npm install nestjs-supabase @supabase/supabase-js
 ## Setup
 
 ### Static config
+
+If your URL and key are plain env vars, this is all you need:
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -38,6 +40,8 @@ export class AppModule {}
 ```
 
 ### Async config (ConfigService)
+
+Using `@nestjs/config`? No problem — use `forRootAsync` instead:
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -60,9 +64,9 @@ export class AppModule {}
 
 ## Usage
 
-### Singleton client (admin / service role)
+### Admin / service role client
 
-Use for operations that bypass RLS. Pass the **service role key** in `forRoot` (never expose this to clients). For user-facing operations, use the request-scoped client instead.
+For backend-only stuff that bypasses RLS — cron jobs, migrations, admin APIs. Use your **service role key** here and keep it secret. Never expose it to the frontend.
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -83,9 +87,9 @@ export class AdminService {
 
 ### Request-scoped client (RLS)
 
-Use for user-facing operations. The Bearer token is automatically forwarded, so RLS works.
+When you’re dealing with user-facing data, use the request-scoped client. It forwards the Bearer token automatically, so RLS kicks in as expected.
 
-**Important:** Services that inject `@InjectSupabaseRequest()` must be request-scoped. Otherwise Nest will throw a scope mismatch error.
+**Heads up:** Any service that injects `@InjectSupabaseRequest()` needs to be request-scoped, or Nest will complain about scope mismatch.
 
 ```typescript
 import { Injectable, Scope } from '@nestjs/common';
@@ -104,9 +108,9 @@ export class UsersService {
 }
 ```
 
-### Auth guard (global by default)
+### Auth guard
 
-`SupabaseAuthModule` registers the guard globally — all routes require authentication by default. Use `@Public()` on routes or controllers to bypass auth:
+`SupabaseAuthModule` turns on auth by default — every route expects a valid JWT. Add `@Public()` to routes or controllers you want to keep open:
 
 ```typescript
 import { Controller, Get } from '@nestjs/common';
@@ -130,7 +134,7 @@ export class HealthController {
 }
 ```
 
-Import `SupabaseAuthModule` in your app module:
+Don’t forget to import `SupabaseAuthModule` in your app module:
 
 ```typescript
 import { SupabaseAuthModule } from 'nestjs-supabase';
@@ -141,9 +145,9 @@ import { SupabaseAuthModule } from 'nestjs-supabase';
 export class AppModule {}
 ```
 
-### Optional auth (public routes with user when present)
+### Optional auth
 
-Use `@SupabaseAuthOptional()` when you want to allow unauthenticated requests but still attach the user when a valid token is provided:
+Sometimes a route should work for everyone, but you still want the user when they’re logged in. That’s what `@SupabaseAuthOptional()` is for:
 
 ```typescript
 import { Controller, Get } from '@nestjs/common';
@@ -164,7 +168,7 @@ export class FeedController {
 
 ### Error helper
 
-Supabase returns `{ data, error }`. Use `throwIfSupabaseError` to convert errors to NestJS exceptions:
+Supabase gives you `{ data, error }`. Instead of checking `res.error` everywhere, use `throwIfSupabaseError` — it turns those into proper NestJS exceptions:
 
 ```typescript
 const res = await this.supabase.from('users').select('*');
@@ -172,20 +176,20 @@ throwIfSupabaseError(res);
 return res.data;
 ```
 
-Mapped status codes: 400 → BadRequest, 401 → Unauthorized, 403 → Forbidden, 404 → NotFound, 409 → Conflict.
+Status mapping: 400 → BadRequest, 401 → Unauthorized, 403 → Forbidden, 404 → NotFound, 409 → Conflict.
 
-## API Reference
+## API reference
 
-| Export | Description |
-|--------|-------------|
+| Export | What it does |
+|--------|--------------|
 | `SupabaseModule` | Core module; use `forRoot()` or `forRootAsync()` |
 | `SupabaseModuleOptions` | Config for `forRoot()`; `url`, `key`, optional `options` (createClient 3rd param) |
 | `SupabaseModuleAsyncOptions` | Config for `forRootAsync()`; `imports`, `inject`, `useFactory` |
 | `SupabaseAuthModule` | Optional; registers `SupabaseAuthGuard` globally |
-| `InjectSupabase()` | Inject singleton client |
-| `InjectSupabaseRequest()` | Inject request-scoped client (RLS); consumer must be `Scope.REQUEST` |
+| `InjectSupabase()` | Inject the singleton client |
+| `InjectSupabaseRequest()` | Inject the request-scoped client (RLS); consumer must be `Scope.REQUEST` |
 | `SupabaseUser()` | Param decorator for `req.user` |
-| `Public()` | Skip auth on route or controller |
+| `Public()` | Skip auth on a route or controller |
 | `SupabaseAuthOptional()` | Allow unauthenticated requests; attach user when present |
 | `SupabaseAuthGuard` | JWT validation guard |
 | `throwIfSupabaseError(result)` | Convert Supabase errors to HttpException |
