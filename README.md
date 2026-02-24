@@ -83,14 +83,16 @@ export class AdminService {
 
 ### Request-scoped client (RLS)
 
-Use for user-facing operations. The Bearer token is automatically forwarded, so RLS works:
+Use for user-facing operations. The Bearer token is automatically forwarded, so RLS works.
+
+**Important:** Services that inject `@InjectSupabaseRequest()` must be request-scoped. Otherwise Nest will throw a scope mismatch error.
 
 ```typescript
-import { Injectable } from '@nestjs/common';
+import { Injectable, Scope } from '@nestjs/common';
 import { InjectSupabaseRequest, throwIfSupabaseError } from 'nestjs-supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class UsersService {
   constructor(@InjectSupabaseRequest() private readonly supabase: SupabaseClient) {}
 
@@ -181,7 +183,7 @@ Mapped status codes: 400 → BadRequest, 401 → Unauthorized, 403 → Forbidden
 | `SupabaseModuleAsyncOptions` | Config for `forRootAsync()`; `imports`, `inject`, `useFactory` |
 | `SupabaseAuthModule` | Optional; registers `SupabaseAuthGuard` globally |
 | `InjectSupabase()` | Inject singleton client |
-| `InjectSupabaseRequest()` | Inject request-scoped client (RLS) |
+| `InjectSupabaseRequest()` | Inject request-scoped client (RLS); consumer must be `Scope.REQUEST` |
 | `SupabaseUser()` | Param decorator for `req.user` |
 | `Public()` | Skip auth on route or controller |
 | `SupabaseAuthOptional()` | Allow unauthenticated requests; attach user when present |
