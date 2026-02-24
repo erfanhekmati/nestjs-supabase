@@ -1,50 +1,25 @@
 import { DynamicModule, Module, Scope } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
-import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT, SUPABASE_OPTIONS, SUPABASE_REQUEST_CLIENT } from './supabase.constants';
 import type { SupabaseModuleAsyncOptions, SupabaseModuleOptions } from './supabase.types';
-import { extractBearerToken } from './utils/token-extractor';
+import {
+  createSupabaseClientFromOptions,
+  createSupabaseClientProvider,
+} from './providers/supabase-client.provider';
+import {
+  createSupabaseRequestClientFromOptions,
+  createSupabaseRequestClientProvider,
+} from './providers/supabase-request-client.provider';
 
 @Module({})
 export class SupabaseModule {
   static forRoot(options: SupabaseModuleOptions): DynamicModule {
-    const optionsProvider = {
-      provide: SUPABASE_OPTIONS,
-      useValue: options,
-    };
-
     return {
       module: SupabaseModule,
       global: true,
       providers: [
-        optionsProvider,
-        {
-          provide: SUPABASE_CLIENT,
-          inject: [SUPABASE_OPTIONS],
-          useFactory: (opts: SupabaseModuleOptions) =>
-            createClient(opts.url, opts.key, opts.options),
-        },
-        {
-          provide: SUPABASE_REQUEST_CLIENT,
-          scope: Scope.REQUEST,
-          inject: [SUPABASE_OPTIONS, REQUEST],
-          useFactory: (
-            opts: SupabaseModuleOptions,
-            req: { headers?: Record<string, string | string[] | undefined> },
-          ) => {
-            const token = extractBearerToken(req);
-            return createClient(opts.url, opts.key, {
-              ...opts.options,
-              global: {
-                ...opts.options?.global,
-                headers: {
-                  ...opts.options?.global?.headers,
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-              },
-            });
-          },
-        },
+        createSupabaseClientProvider(options),
+        createSupabaseRequestClientProvider(options),
       ],
       exports: [SUPABASE_CLIENT, SUPABASE_REQUEST_CLIENT],
     };
@@ -66,29 +41,13 @@ export class SupabaseModule {
         {
           provide: SUPABASE_CLIENT,
           inject: [SUPABASE_OPTIONS],
-          useFactory: (opts: SupabaseModuleOptions) =>
-            createClient(opts.url, opts.key, opts.options),
+          useFactory: createSupabaseClientFromOptions,
         },
         {
           provide: SUPABASE_REQUEST_CLIENT,
           scope: Scope.REQUEST,
           inject: [SUPABASE_OPTIONS, REQUEST],
-          useFactory: (
-            opts: SupabaseModuleOptions,
-            req: { headers?: Record<string, string | string[] | undefined> },
-          ) => {
-            const token = extractBearerToken(req);
-            return createClient(opts.url, opts.key, {
-              ...opts.options,
-              global: {
-                ...opts.options?.global,
-                headers: {
-                  ...opts.options?.global?.headers,
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-              },
-            });
-          },
+          useFactory: createSupabaseRequestClientFromOptions,
         },
       ],
       exports: [SUPABASE_CLIENT, SUPABASE_REQUEST_CLIENT],
