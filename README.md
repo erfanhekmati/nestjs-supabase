@@ -6,11 +6,13 @@ Supabase integration for NestJS — DI, request-scoped client with RLS support, 
 
 - **SupabaseModule** — Easy setup with `forRoot` / `forRootAsync`
 - **Request-scoped client** — Automatically forwards `Authorization` header so RLS works
-- **Auth guard** — Validates JWT and attaches user to request
+- **Auth guard** — Global JWT validation; use `@Public()` to skip auth on specific routes
 - **Error helper** — Maps Supabase errors to NestJS `HttpException`s
-- **Decorators** — `@InjectSupabase()`, `@InjectSupabaseRequest()`, `@SupabaseUser()`
+- **Decorators** — `@InjectSupabase()`, `@InjectSupabaseRequest()`, `@SupabaseUser()`, `@Public()`, `@SupabaseAuthOptional()`
 
 ## Installation
+
+Requires NestJS 10 or 11, Node 18+.
 
 ```bash
 npm install nestjs-supabase @supabase/supabase-js
@@ -60,7 +62,7 @@ export class AppModule {}
 
 ### Singleton client (admin / service role)
 
-Use for operations that bypass RLS (e.g. with service role key):
+Use for operations that bypass RLS. Pass the **service role key** in `forRoot` (never expose this to clients). For user-facing operations, use the request-scoped client instead.
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -102,11 +104,11 @@ export class UsersService {
 
 ### Auth guard (global by default)
 
-`SupabaseAuthModule` registers the guard globally — all routes require authentication by default. Use `@Public()` to make routes accessible without auth:
+`SupabaseAuthModule` registers the guard globally — all routes require authentication by default. Use `@Public()` on routes or controllers to bypass auth:
 
 ```typescript
 import { Controller, Get } from '@nestjs/common';
-import { Public, SupabaseAuthModule, SupabaseUser } from 'nestjs-supabase';
+import { Public, SupabaseUser } from 'nestjs-supabase';
 
 @Controller('profile')
 export class ProfileController {
@@ -153,8 +155,7 @@ export class FeedController {
   @SupabaseAuthOptional()
   @Get()
   getFeed(@SupabaseUser() user: Record<string, unknown> | null) {
-    // user is null if not authenticated
-    return this.feedService.getFeed(user?.id);
+    return { feed: [], userId: user?.id ?? null };
   }
 }
 ```
@@ -165,7 +166,7 @@ Supabase returns `{ data, error }`. Use `throwIfSupabaseError` to convert errors
 
 ```typescript
 const res = await this.supabase.from('users').select('*');
-throwIfSupabaseError(res);  // throws BadRequestException, NotFoundException, etc.
+throwIfSupabaseError(res);
 return res.data;
 ```
 
@@ -176,11 +177,13 @@ Mapped status codes: 400 → BadRequest, 401 → Unauthorized, 403 → Forbidden
 | Export | Description |
 |--------|-------------|
 | `SupabaseModule` | Core module; use `forRoot()` or `forRootAsync()` |
+| `SupabaseModuleOptions` | Config for `forRoot()`; `url`, `key`, optional `options` (createClient 3rd param) |
+| `SupabaseModuleAsyncOptions` | Config for `forRootAsync()`; `imports`, `inject`, `useFactory` |
 | `SupabaseAuthModule` | Optional; registers `SupabaseAuthGuard` globally |
 | `InjectSupabase()` | Inject singleton client |
 | `InjectSupabaseRequest()` | Inject request-scoped client (RLS) |
 | `SupabaseUser()` | Param decorator for `req.user` |
-| `Public()` | Skip auth entirely (for public routes) |
+| `Public()` | Skip auth on route or controller |
 | `SupabaseAuthOptional()` | Allow unauthenticated requests; attach user when present |
 | `SupabaseAuthGuard` | JWT validation guard |
 | `throwIfSupabaseError(result)` | Convert Supabase errors to HttpException |
